@@ -1,0 +1,91 @@
+---
+description: Clean Architecture for API endpoints
+globs:
+  - "app/api/**/*"
+  - "pages/api/**/*"
+alwaysApply: true
+---
+
+# Clean Architecture for API Endpoints
+
+## Layered Architecture Pattern
+
+All API endpoints **MUST** follow clean architecture principles with strict separation of concerns:
+
+- **Controller Layer (Route Handler):** authenticate user, validate input (Zod), map input, call one service, map to HTTP response.
+- **Service Layer (Business Logic):** validate business rules, orchestrate operations, call repositories, transform data, log events.
+- **Repository Layer (Data Access):** database queries, snake_case <-> camelCase mapping, DB error handling.
+
+**Golden Rule: Controllers -> Services -> Repositories (NEVER skip layers)**
+
+## Controller Layer (Route Handlers)
+
+Controllers **MUST** do exactly these 5 things, in this order:
+1. Check authentication (`verifyAuthApp`)
+2. Validate input (Zod schemas)
+3. Map input to internal objects (extract validated data)
+4. Call service (ONE service method with all business logic)
+5. Map service response to HTTP response (return NextResponse)
+
+### Strictly forbidden in controllers
+
+- NO business logic
+- NO direct repository calls
+- NO helper functions with business logic
+- NO permission checks
+- NO entity validation
+- NO data transformation
+- NO external API calls
+- NO multiple service calls for one operation
+
+## Service Layer (Business Logic)
+
+Services contain **ALL business logic** and orchestrate operations:
+- Validate business rules (permissions, entity relationships, invariants)
+- Orchestrate multiple repository calls
+- Transform data between layers
+- Log business events (using Pino)
+- Handle errors with proper context
+- Coordinate transactions (when supported)
+- Call external APIs if needed
+
+### Strictly forbidden in services
+
+- NO HTTP concerns (status codes, headers, NextResponse)
+- NO Zod validation (input validation is controller's job)
+- NO direct database queries (use repositories)
+
+## Repository Layer (Data Access)
+
+Repositories handle **ONLY data access** and mapping:
+- Database query abstraction (Supabase client)
+- Data mapping (snake_case <-> camelCase)
+- Connection management (Supabase client)
+- Query optimization
+- Handle database errors with descriptive messages
+
+### Strictly forbidden in repositories
+
+- NO business logic
+- NO permission checks
+- NO business validation
+- NO HTTP concerns
+
+## Critical Rules
+
+- Dependency direction: Controllers -> Services -> Repositories
+- **NEVER** skip layers (Controller -> Repository)
+- Input validation in controllers
+- Business validation in services
+- Data transformation in repositories/services
+- Testing split: controllers (HTTP), services (business logic), repositories (data access)
+
+## Common Anti-Patterns to Avoid
+
+- Fat Controllers (business logic in handlers)
+- Controller calling repositories directly
+- Anemic Services (no business logic)
+- Repository with business logic
+- Multiple service calls in controller
+- Service returning HTTP status codes
+- Helper functions with business logic in controller
